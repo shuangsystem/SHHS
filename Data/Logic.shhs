@@ -1,0 +1,38 @@
+module Data.Logic where
+
+class Bounded a => Logic a where
+  not :: a -> a
+  not x = x >-> minBound
+  (&&) :: a -> a -> a
+  a && b = not (a >-> not b)
+  (||) :: a -> a -> a
+  a || b = not a >-> b
+  (<+>) :: a -> a -> a
+    a <+> b = not ((a >-> b) && (b >-> a))
+    -- 对称差
+  (\\) :: a -> a -> a
+  a \\ b = a <+> (a && b)
+    -- 差
+  (>->) :: a -> a -> a
+    -- 推得
+  (&&>) :: Logic b => S a -> S (a, b) -> b
+  (||>) :: Logic b => S a -> S (a, b) -> b
+  {-# MINIMAL (>->), (&&>), (||>) #-}
+
+overAll :: Logic a => S a -> a
+overAll xs = anything &&> fmap (() ,) xs
+
+overSome :: Logic a => S a -> a
+overSome xs = anything ||> fmap (() ,) xs
+
+instance Logic Bool where
+  ...
+  False >-> _ = True
+  True  >-> x = x
+  i &&> ys := ∀(ms, xs) ∈ ys, ms ∈ i -> xs
+  i ||> ys := ∃(ms, xs) ∈ ys, ms ∈ i ∧ xs
+
+instance Logic a => Logic (r -> a) where
+  (>->) = liftA2 (>->)
+  (&&>) = liftA2 (&&>)
+  (||>) = liftA2 (||>)

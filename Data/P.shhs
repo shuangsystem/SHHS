@@ -1,0 +1,31 @@
+module Data.P where
+
+the :: P a -> a
+the x := 当前语境下x的含义
+
+instance Functor P where
+  fmap f xs = pure f <*> xs
+
+instance Applicative P where
+  pure x := 默认指代x的代词
+  f <*> x = do
+    g <- f
+    v <- x
+    pure $ g v
+
+instance Monad P where
+  a >>= b = b $ the a
+
+instance Foldable P where
+  foldr x = the x
+
+instance Traversable P where
+  sequenceA x = pure <$> the x
+
+bind :: [(P a, a)] -> Content
+bind xs s := 设f :: [(P a, a)] -> M = flip bind s
+  则f xs是关于xs的M的函数
+  其中xs是对f中各指代取值的一个指派
+  即f xs为将xs中的键值对做如下处理
+    每个键记作x, the x得到xs中对应键的值
+  -- 换句话说, bind xs s在s中将xs中提及的指代按照xs中的键值对绑定/重新绑定

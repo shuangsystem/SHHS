@@ -1,0 +1,31 @@
+import Data.Num where
+
+class Lift a b
+type Complex := 复数
+type R := 实数
+type Q := 有理数
+type Integer := 整数
+type Natural := 自然数
+instances Lift Natural Integer Q R Complex
+  -- 设计目的为减少样板代码
+
+class Num a where
+  (+), (-), (*) :: a -> a -> a
+  (^) :: Num b => a -> b -> a
+instance Lift a Complex => Num a
+
+class Real a
+instance Lift a R => Real a
+
+class Rational a
+instance Lift a Q => Rational a
+
+class Integral a
+instance Lift a Integer => Integral a
+
+class Nat a
+instance Lift a Natural => Nat a
+
+class Fractional a where
+  (/) :: a -> a -> a
+instance Lift Q a => Fractional a

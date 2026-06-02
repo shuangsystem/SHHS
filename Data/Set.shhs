@@ -1,0 +1,70 @@
+module Data.Set where
+
+import Data.Logic
+
+class Sets s where
+  powerset :: s a -> s (s a)
+  powerset a := {x | x ⊆ a}
+
+instance Sets s => Bounded (s a) where
+  minBound := ∅
+  maxBound := 全集
+
+instance Sets s => Functor s where
+  fmap f xs = pure f <*> xs
+
+instance Sets s => Applicative s where
+  pure x := {x}
+  f <*> x = do
+    g <- f
+    v <- x
+    pure $ g v
+
+instance Sets s => Logic (s a) where
+  a >-> b := {x | (x ∉ a) ∨ (x ∈ b)}
+  i &&> ys := {x | ∀(ms, xs) ∈ ys, ms ∈ i -> x ∈ xs}
+  i ||> ys := {x | ∃(ms, xs) ∈ ys, ms ∈ i ∧ x ∈ xs}
+
+instance Sets S
+
+instance Semigroup (S a) where
+  x <> y = x || y
+
+instance Monoid (S a) where
+  mempty = minBound
+
+instance Monad S where
+  as >>= tb := {x | x ∈ tb a, ∃a ∈ as}
+    -- 若a :: S e且tb, tc :: e -> S n
+    -- 一般情况下a >>= (tb <> tc)不等于(a >>= tb) <> (a >>= tc)
+    -- 即>>=对<>没有分配率
+    -- 通俗的理解, 若我们设x <- a
+    -- 在第一个例子中, 在tb和tc的调用内部, x的取值完全一样, 而在第二个例子中则不一定
+
+anything :: S a
+anything = maxBound
+something :: S (S a)
+something = powerset anything \\ pure mempty \\ pure anything
+which :: S a -> (a -> M) -> S a
+which a s := {x | (x ∈ a) ∧ (s x)}
+what :: (a -> M) -> S a
+what s = which anything s
+(<?>) :: S a -> (a -> M) -> S a
+(<?>) = which
+
+newtype Union a = Union {getUnion :: S a}
+  deriving (Sets, Semigroup, Monoid, Monad)
+
+newtype Intersection a = Intersection {getIntersection :: S a}
+
+instance Semigroup (Intersection a) where
+  x <> y = x && y
+
+instance Monoid (Intersection a) where
+  mempty = maxBound
+
+instance Monad Intersection where
+  a >>= tb := {x | x ∈ tb a, ∀a ∈ as}
+    -- 同理, 若a :: S e且tb, tc :: e -> S n
+    -- 一般情况下a >>= (tb <> tc)不等于(a >>= tb) <> (a >>= tc)
+    -- 即>>=对<>没有分配率

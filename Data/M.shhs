@@ -1,0 +1,6 @@
+module Data.M where
+import Data.Set
+import Data.Logic
+
+newtype M = M (Intersection AtomM)
+  deriving (Bounded, Logic, Semigroup, Monoid)
