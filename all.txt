@@ -1,0 +1,613 @@
+./例句.txt:
+“我保护你，弄死欺负你的人”
+
+main :: M
+main = overAll do
+  p <- what $ 欺负 你
+  pure 保护 你 我 <> pure 弄死 p 我
+
+----------------------------------------------------
+
+“我保护你, 谁欺负你, 我就以其人之道还治其人之身”
+
+main :: M
+main = overAll do
+  p <- what $ 欺负 你
+  f <- what $ \f -> f 你 p
+  pure 保护 你 我 <> pure f p 我
+
+----------------------------------------------------
+
+"我拥有拿去拜访你, 你会变开心的东西"
+
+main :: M
+main = overAll do
+  x <- what $ \x -> 每当 (拜访 你 我 `且` 送给 x 你 我) (变得 开心 你)
+  pure 拥有 x 我
+
+----------------------------------------------------
+
+"你总共有多少元?"
+
+main :: S Natural
+main = what $ \x -> 拥有 (that $ x .* 元) 你
+
+----------------------------------------------------
+
+"小明欺负你和你弄死小明之间有什么关系?" -- 这个翻译有点局限
+
+小明 :: N
+main :: S (M -> M -> M)
+main = what $ \f -> (欺负 你 小明) `f` (弄死 小明 你)
+
+----------------------------------------------------
+
+"你说啥?"
+
+main :: S (M)
+main = what $ \x -> 说 (that x) 你
+
+----------------------------------------------------
+
+"小明欠你钱和你弄死小明之间有什么关系, 你欠我钱和我弄死你之间就有什么关系"
+  -- 这个翻译有点局限
+
+小明 :: N
+钱 :: N
+main :: M
+main = overAll do
+  f <- what $ \f -> (欠 钱 你 小明) `f` (弄死 小明 你)
+  pure $ (欠 钱 我 你) `f` (弄死 你 我)
+
+----------------------------------------------------
+
+"我将找到那只偷腥的猫并弄死它"
+
+猫 :: N
+偷腥 :: V
+找到 :: V1
+main :: M
+main = overAll do
+  x <- 猫 <?> \x -> 偷腥 x
+  pure $ 找到 x 我 && 弄死 x 我
+
+----------------------------------------------------
+
+"我不知道你有多少苹果"
+
+苹果 :: N
+知道 :: V1
+main :: M
+main = overAll do
+  let
+    a :: S Natural
+    a = what $ \x -> 拥有 (that $ x .* 苹果) 你
+  x <- a
+  pure . not $ 知道 (that x) 我
+
+----------------------------------------------------
+
+"我不知道你有多少苹果. (但是)我知道你有你拥有的苹果数量个苹果"
+
+苹果 :: N
+知道 :: V1
+main :: M
+main = overAll do
+  let
+    a :: S Natural
+    a = what $ \x -> 拥有 (that $ x .* 苹果) 你
+  x <- a
+  pure $ not (知道 (that x) 我) <> 知道 (that $ answer x a) 我
+
+
+
+./发展史.txt:
+1.
+   do I $ Kill You
+   译: 我杀你
+
+2.
+   doC I (Kill You) $ When $ TimeRangeT $ (+) Now
+   译: 我会在（从今往后的）某个时候杀你
+
+3.
+   do (getIn 语法 Me) $ not have $ getWhen 句子 $ (!=) 陈述句
+   译: 在我（定义）的语法系统里，还没有“当句子不等于陈述句时”的情况
+
+4.
+   oneOf $ (\a -> doC I (kill You) $ When a) <$> range Now NoBounded
+   译: 在从今往后的某个时刻，我杀你
+
+5. 二战转折点
+   (每当 $ 见到 我 你) (问好向 我 你)
+   译: 每当你见到我，你就向我问好
+
+6.
+   do
+     保护 你 我
+     p <- what $ 欺负 你
+     弄死 p 我
+   译: 我保护你, 弄死欺负你的人
+
+7.
+   do
+     保护 你 我
+     p <- what $ 欺负 你
+     f <- what $ \g -> g 你 p
+     f p 我
+   译: 我保护你, 谁欺负你, 我就以其人之道还治其人之身
+
+8.
+   do
+     x <- what $ \a -> 每当 (拜访 你 我 `且` 送给 a 你 我) (变得 开心 你)
+     拥有 x 我
+   译: 我拥有拿去拜访你, 你会变开心的东西
+   
+
+
+./Prelude.shhs:
+module Prelude where
+
+import haskelldef
+import Data.Set
+import Data.Logic
+import Data.M
+import Data.Num
+import Data.P
+
+me :: N
+you :: N
+
+class Thing a
+  (.*) :: Real b => b -> a -> a
+    -- 数量积, 有的事物乘任何大于零的东西是没效果的, 如集合. 大部分不能乘以负数
+  that :: a -> N
+instance Thing M
+instance Thing (S a)
+instance Thing N where
+  that = id
+instance Thing Count
+instance Num a => Thing a where
+  a .* b = fromR $ toR a * toR b
+instance Thing Bool
+instance (Thing a, Monoid a) => Thing [a] where
+  r .* xs = foldMap (r .*) xs
+instance Thing () where
+  r .* n = n
+instance (Thing a, Thing xs, Tuple xs) => Thing (a, ...xs) where
+  r .* (x, ...xs) = (r .* x, ...(r .* xs))
+
+{- time :: M -> Time
+-- 返回句子的参照时间
+now :: Time
+-- 返回说话时的时间
+self :: M
+-- 重定向到句子自身的引用
+on :: P a
+-- 初始绑定为说话时地点 -}
+
+{- data TimeState = Pass | Now | Fut
+at :: TimeState -> Content
+while :: M -> Content
+when :: Time -> Content
+when x = while . equate (time self) x -}
+
+equate :: a -> a -> M
+equate := 陈述两个事物等价
+whether :: M -> S Bool
+whether x := {x的真值}
+  -- 可能得到空集或{False, True}
+
+
+
+
+
+./语言定义.txt:
+-- SHHS (SHuang HaSkell)
+data S a := 集合
+  -- 基数可以大于ℵ0, 所以不能被折叠
+data Atom := 只指代一个事物/抽象事物的纯粹的名词
+  -- 这个定义只会在定义名词的时候用一下, 用于帮助理解
+data N = S Atom
+  -- N是名词
+data AtomM := 原子陈述
+newtype M
+  -- 定义在Data/Set.shhs
+data P a := 代词, 代指一个类型为a的事物
+  -- 代词可以在不同语境绑定不同东西
+data Count := 量词
+data Time := 时间
+type V = N -> M
+type V1 = N -> V
+type V2 = N -> V1
+type Content = M -> M
+
+-- 其中":="读作"定义为", 作用是用自然语言定义一个声明或函数
+
+-- 当使用词汇时, 推荐先在某个上下文声明词汇的类型, 除非这个词汇的类型显而易见
+-- 如: (石头 :: N), (站立 :: V), (但是 :: M -> M -> M)
+
+-- 一个合法的句子的类型可以是以下几种的单态或其多态
+-- M
+-- S a
+-- (M, S a)
+-- S a -> M
+-- S a -> (M, S a)
+
+-- 可以使用main, 如"main = 吃 饭 我"
+-- 可以不用main, 如可以直接写"吃 饭 我", "\x -> answer 5 x"
+-- 返回S a则表示提问这个集合的内容
+
+-- 允许如下语法
+-- instances PartOrdTypeClassName T0 T1 T2 ... Tn
+-- 展开为
+-- instance PartOrdTypeClassName Ti Tj    -- j ∈ 0..n, i ∈ 0..j
+
+-- 求值任何类型的未定义值都不会导致整体未定义, 只是会引入语义上的不严谨, 就像自然语言中"这句话是假的"照样能说一样
+-- 将不可数基数的东西放到序列之类的结构里也是未定义行为
+-- 将不可数基数的容器实现为Foldable也是未定义行为
+-- 还有一些其他未定义行为
+-- 如: "m = m ++ [0]"
+
+
+
+./haskelldef.shhs:
+-- 这个文件展示了从haskell继承而来的一些定义
+-- 有修改和缩减
+
+module haskelldef
+
+($) :: (a -> b) -> a -> b
+f $ x = f x
+infixr 0 ($)
+(.) :: (b -> c) -> (a -> b) -> (a -> c)
+(f . g) x = f (g x)
+infixr 9 .
+flip :: (a -> b -> c) -> (b -> a -> c)
+flip f a b = f b a
+curry :: ((a, b) -> c) -> (a -> b -> c)
+(curry f) a b = f (a, b)
+uncurry f (a, b) = f a b
+all :: Foldable t => (a -> Bool) -> t a -> Bool
+any :: Foldable t => (a -> Bool) -> t a -> Bool
+
+data [x] = x : [x] | []
+
+class Tuple a := a是元组
+
+class Belong xs x -- xs包含x
+instance Belong (a, ...) a -- 允许使用此语法递归展开元组
+  -- 此语法可以兼顾到Solo
+instance Belong xs x => Belong (_, ...xs) x
+
+data () -- 空元组
+data Solo a -- 一元组
+data (a, ...) := n元组
+
+data Bool = False | True deriving (Show, Read, Bounded, Enum, Eq, Ord)
+
+class Bounded a where
+  minBound :: a
+  maxBound :: a
+  {-# MINIMAL minBound, maxBound #-}
+...
+instance Bounded b => Bounded (a -> b) where
+  minBound = const minBound
+  maxBound = const maxBound
+
+class Eq a where
+  (==) :: a -> a -> Bool
+  (/=) :: a -> a -> Bool
+  {-# MINIMAL (==) | (/=) #-}
+instance Eq Bool
+instance Num a => Eq a
+instance Eq a => Eq [a]
+instance Eq Ordering
+instance Eq ()
+instance (Eq a, Eq xs, Tuple xs) => Eq (a, ...xs)
+
+class Eq a => Ord a where
+  compare :: a -> a -> Ordering
+  (<) :: a -> a -> Bool
+  (<=) :: a -> a -> Bool
+  (>) :: a -> a -> Bool
+  (>=) :: a -> a -> Bool
+  max :: a -> a -> a
+  min :: a -> a -> a
+  {-# MINIMAL compare | (<=) #-}
+instance Ord Bool
+instance Num a => Ord a
+instance Ord a => Ord [a]
+instance Ord Ordering
+instance Ord ()
+instance (Ord a, Ord xs, Tuple xs) => Ord (a, ...xs)
+
+data Ordering = LT | EQ | GT
+
+class Enum a where
+  succ :: a -> a
+  pred :: a -> a
+  toEnum :: Integer -> a
+  fromEnum :: a -> Integer
+  enumFrom :: a -> [a]
+  enumFromThen :: a -> a -> [a]
+  enumFromTo :: a -> a -> [a]
+  enumFromThenTo :: a -> a -> a -> [a]
+  {-# MINIMAL toEnum, fromEnum #-}
+instance Enum Bool
+instance Enum Ordering
+instance Enum a => Enum (Solo a)
+instance Enum ()
+instance Intgral a => Enum a
+
+class Functor f where
+  fmap, (<$>) :: (a -> b) -> f a -> f b
+  (<$) :: a -> f b -> f a
+  {-# MINIMAL fmap | (<$>) #-}
+instance Functor []
+instance Functor ((->) r)
+instance Functor (..., a) -- 元组
+
+class Functor f => Applicative f where
+  pure :: a -> f a
+  (<*>) :: f (a -> b) -> f a -> f b
+  liftA2 :: (a -> b -> c) -> f a -> f b -> f c
+  (*>) :: f a -> f b -> f b
+  (<*) :: f a -> f b -> f a
+  {-# MINIMAL pure, ((<*>) | liftA2) #-}
+instance Applicative ((->) r)
+instance Applicative []
+instance Monoid a => Applicative ((,) a)
+instance (Monoid a, Applicative xs, Tuple xs) => Applicative (...xs, a,)
+
+class Applicative m => Monad m where
+  (>>=) :: m a -> (a -> m b) -> m b
+  infixl 1 >>=
+  (>>) :: m a -> m b -> m b
+  a >> b = a >>= \_ -> b
+  infixl 1 >>
+  {-# MINIMAL (>>=) #-}
+instance Monad []
+instance Monad ((->) r)
+
+class Semigroup a where
+  (<>) :: a -> a -> a
+instance Semigroup b => Semigroup (a -> b)
+instance Semigroup a => Semigroup (IO a)
+instance Semigroup [a] -- Defined in ‘GHC.Internal.Base’
+instance Semigroup ()
+instance (Semigroup a, Semigroup xs, Tuple xs) => Semigroup (a, ...xs)
+instance Semigroup Ordering
+
+class Semigroup a => Monoid a where
+  mempty :: a
+  mconcat :: [a] -> a
+  {-# MINIMAL mempty | mconcat #-}
+instance Monoid b => Monoid (a -> b)
+instance Monoid [a]
+instance Monoid ()
+instance (Monoid a, Monoid xs, Tuple xs) => Monoid (a, ...xs)
+instance Monoid Ordering
+
+class Foldable t where
+  foldMap :: Monoid m => (a -> m) -> t a -> m
+  foldr :: (a -> b -> b) -> b -> t a -> b
+  foldl :: (b -> a -> b) -> b -> t a -> b
+  foldr1 :: (a -> a -> a) -> t a -> a
+  foldl1 :: (a -> a -> a) -> t a -> a
+  null :: t a -> Bool
+  toList :: t a -> [a]
+  length :: t a -> Int
+  elem :: Eq a => a -> t a -> Bool
+  maximum :: Ord a => t a -> a
+  minimum :: Ord a => t a -> a
+  sum :: Num a => t a -> a
+  product :: Num a => t a -> a
+  {-# MINIMAL foldMap | foldr #-}
+instance Foldable []
+instance Foldable Solo
+
+class (Functor t, Foldable t) => Traversable t where
+  traverse :: Applicative f => (a -> f b) -> t a -> f (t b)
+  sequenceA :: Applicative f => t (f a) -> f (t a)
+  {-# MINIMAL traverse | sequenceA #-}
+instance Traversable (Either a)
+instance Traversable []
+instance Traversable Maybe
+instance Traversable Solo
+instance Traversable ((,) a)
+for :: Applicative f => t a -> (a -> f b) -> f (t b)
+
+
+./Data/Set.shhs:
+module Data.Set where
+
+import Data.Logic
+
+class Sets s where
+  powerset :: s a -> s (s a)
+  powerset a := {x | x ⊆ a}
+
+instance Sets s => Bounded (s a) where
+  minBound := ∅
+  maxBound := 全集
+
+instance Sets s => Functor s where
+  fmap f xs = pure f <*> xs
+
+instance Sets s => Applicative s where
+  pure x := {x}
+  f <*> x = do
+    g <- f
+    v <- x
+    pure $ g v
+
+instance Sets s => Logic (s a) where
+  a >-> b := {x | (x ∉ a) ∨ (x ∈ b)}
+  i &&> ys := {x | ∀(ms, xs) ∈ ys, ms ∈ i -> x ∈ xs}
+  i ||> ys := {x | ∃(ms, xs) ∈ ys, ms ∈ i ∧ x ∈ xs}
+
+instance Sets S
+
+instance Semigroup (S a) where
+  x <> y = x || y
+
+instance Monoid (S a) where
+  mempty = minBound
+
+instance Monad S where
+  as >>= tb := {x | x ∈ tb a, ∃a ∈ as}
+    -- 若a :: S e且tb, tc :: e -> S n
+    -- 一般情况下a >>= (tb <> tc)不等于(a >>= tb) <> (a >>= tc)
+    -- 即>>=对<>没有分配率
+    -- 通俗的理解, 若我们设x <- a
+    -- 在第一个例子中, 在tb和tc的调用内部, x的取值完全一样, 而在第二个例子中则不一定
+
+anything :: S a
+anything = maxBound
+something :: S (S a)
+something = powerset anything \\ pure mempty \\ pure anything
+which :: S a -> (a -> M) -> S a
+which a s := {x | (x ∈ a) ∧ (s x)}
+what :: (a -> M) -> S a
+what s = which anything s
+(<?>) :: S a -> (a -> M) -> S a
+(<?>) = which
+
+newtype Union a = Union {getUnion :: S a}
+  deriving (Sets, Semigroup, Monoid, Monad)
+
+newtype Intersection a = Intersection {getIntersection :: S a}
+
+instance Semigroup (Intersection a) where
+  x <> y = x && y
+
+instance Monoid (Intersection a) where
+  mempty = maxBound
+
+instance Monad Intersection where
+  a >>= tb := {x | x ∈ tb a, ∀a ∈ as}
+    -- 同理, 若a :: S e且tb, tc :: e -> S n
+    -- 一般情况下a >>= (tb <> tc)不等于(a >>= tb) <> (a >>= tc)
+    -- 即>>=对<>没有分配率
+
+
+./Data/Logic.shhs:
+module Data.Logic where
+
+class Bounded a => Logic a where
+  not :: a -> a
+  not x = x >-> minBound
+  (&&) :: a -> a -> a
+  a && b = not (a >-> not b)
+  (||) :: a -> a -> a
+  a || b = not a >-> b
+  (<+>) :: a -> a -> a
+    a <+> b = not ((a >-> b) && (b >-> a))
+    -- 对称差
+  (\\) :: a -> a -> a
+  a \\ b = a <+> (a && b)
+    -- 差
+  (>->) :: a -> a -> a
+    -- 推得
+  (&&>) :: Logic b => S a -> S (a, b) -> b
+  (||>) :: Logic b => S a -> S (a, b) -> b
+  {-# MINIMAL (>->), (&&>), (||>) #-}
+
+overAll :: Logic a => S a -> a
+overAll xs = anything &&> fmap (() ,) xs
+
+overSome :: Logic a => S a -> a
+overSome xs = anything ||> fmap (() ,) xs
+
+instance Logic Bool where
+  ...
+  False >-> _ = True
+  True  >-> x = x
+  i &&> ys := ∀(ms, xs) ∈ ys, ms ∈ i -> xs
+  i ||> ys := ∃(ms, xs) ∈ ys, ms ∈ i ∧ xs
+
+instance Logic a => Logic (r -> a) where
+  (>->) = liftA2 (>->)
+  (&&>) = liftA2 (&&>)
+  (||>) = liftA2 (||>)
+
+
+./Data/M.shhs:
+module Data.M where
+import Data.Set
+import Data.Logic
+
+newtype M = M (Intersection AtomM)
+  deriving (Bounded, Logic, Semigroup, Monoid)
+
+
+
+./Data/Num.shhs:
+import Data.Num where
+
+class Lift a b
+type Complex := 复数
+type R := 实数
+type Q := 有理数
+type Integer := 整数
+type Natural := 自然数
+instances Lift Natural Integer Q R Complex
+  -- 设计目的为减少样板代码
+
+class Num a where
+  (+), (-), (*) :: a -> a -> a
+  (^) :: Num b => a -> b -> a
+instance Lift a Complex => Num a
+
+class Real a
+instance Lift a R => Real a
+
+class Rational a
+instance Lift a Q => Rational a
+
+class Integral a
+instance Lift a Integer => Integral a
+
+class Nat a
+instance Lift a Natural => Nat a
+
+class Fractional a where
+  (/) :: a -> a -> a
+instance Lift Q a => Fractional a
+
+
+./Data/P.shhs:
+module Data.P where
+
+the :: P a -> a
+the x := 当前语境下x的含义
+
+instance Functor P where
+  fmap f xs = pure f <*> xs
+
+instance Applicative P where
+  pure x := 默认指代x的代词
+  f <*> x = do
+    g <- f
+    v <- x
+    pure $ g v
+
+instance Monad P where
+  a >>= b = b $ the a
+
+instance Foldable P where
+  foldr x = the x
+
+instance Traversable P where
+  sequenceA x = pure <$> the x
+
+bind :: [(P a, a)] -> Content
+bind xs s := 设f :: [(P a, a)] -> M = flip bind s
+  则f xs是关于xs的M的函数
+  其中xs是对f中各指代取值的一个指派
+  即f xs为将xs中的键值对做如下处理
+    每个键记作x, the x得到xs中对应键的值
+  -- 换句话说, bind xs s在s中将xs中提及的指代按照xs中的键值对绑定/重新绑定
+
+

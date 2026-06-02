@@ -1,0 +1,53 @@
+module Prelude where
+
+import haskelldef
+import Data.Set
+import Data.Logic
+import Data.M
+import Data.Num
+import Data.P
+
+me :: N
+you :: N
+
+class Thing a
+  (.*) :: Real b => b -> a -> a
+    -- 数量积, 有的事物乘任何大于零的东西是没效果的, 如集合. 大部分不能乘以负数
+  that :: a -> N
+instance Thing M
+instance Thing (S a)
+instance Thing N where
+  that = id
+instance Thing Count
+instance Num a => Thing a where
+  a .* b = fromR $ toR a * toR b
+instance Thing Bool
+instance (Thing a, Monoid a) => Thing [a] where
+  r .* xs = foldMap (r .*) xs
+instance Thing () where
+  r .* n = n
+instance (Thing a, Thing xs, Tuple xs) => Thing (a, ...xs) where
+  r .* (x, ...xs) = (r .* x, ...(r .* xs))
+
+{- time :: M -> Time
+-- 返回句子的参照时间
+now :: Time
+-- 返回说话时的时间
+self :: M
+-- 重定向到句子自身的引用
+on :: P a
+-- 初始绑定为说话时地点 -}
+
+{- data TimeState = Pass | Now | Fut
+at :: TimeState -> Content
+while :: M -> Content
+when :: Time -> Content
+when x = while . equate (time self) x -}
+
+equate :: a -> a -> M
+equate := 陈述两个事物等价
+whether :: M -> S Bool
+whether x := {x的真值}
+  -- 可能得到空集或{False, True}
+
+

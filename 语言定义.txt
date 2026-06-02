@@ -1,0 +1,45 @@
+-- SHHS (SHuang HaSkell)
+data S a := 集合
+  -- 基数可以大于ℵ0, 所以不能被折叠
+data Atom := 只指代一个事物/抽象事物的纯粹的名词
+  -- 这个定义只会在定义名词的时候用一下, 用于帮助理解
+data N = S Atom
+  -- N是名词
+data AtomM := 原子陈述
+newtype M
+  -- 定义在Data/Set.shhs
+data P a := 代词, 代指一个类型为a的事物
+  -- 代词可以在不同语境绑定不同东西
+data Count := 量词
+data Time := 时间
+type V = N -> M
+type V1 = N -> V
+type V2 = N -> V1
+type Content = M -> M
+
+-- 其中":="读作"定义为", 作用是用自然语言定义一个声明或函数
+
+-- 当使用词汇时, 推荐先在某个上下文声明词汇的类型, 除非这个词汇的类型显而易见
+-- 如: (石头 :: N), (站立 :: V), (但是 :: M -> M -> M)
+
+-- 一个合法的句子的类型可以是以下几种的单态或其多态
+-- M
+-- S a
+-- (M, S a)
+-- S a -> M
+-- S a -> (M, S a)
+
+-- 可以使用main, 如"main = 吃 饭 我"
+-- 可以不用main, 如可以直接写"吃 饭 我", "\x -> answer 5 x"
+-- 返回S a则表示提问这个集合的内容
+
+-- 允许如下语法
+-- instances PartOrdTypeClassName T0 T1 T2 ... Tn
+-- 展开为
+-- instance PartOrdTypeClassName Ti Tj    -- j ∈ 0..n, i ∈ 0..j
+
+-- 求值任何类型的未定义值都不会导致整体未定义, 只是会引入语义上的不严谨, 就像自然语言中"这句话是假的"照样能说一样
+-- 将不可数基数的东西放到序列之类的结构里也是未定义行为
+-- 将不可数基数的容器实现为Foldable也是未定义行为
+-- 还有一些其他未定义行为
+-- 如: "m = m ++ [0]"

@@ -1,0 +1,165 @@
+-- 这个文件展示了从haskell继承而来的一些定义
+-- 有修改和缩减
+
+module haskelldef
+
+($) :: (a -> b) -> a -> b
+f $ x = f x
+infixr 0 ($)
+(.) :: (b -> c) -> (a -> b) -> (a -> c)
+(f . g) x = f (g x)
+infixr 9 .
+flip :: (a -> b -> c) -> (b -> a -> c)
+flip f a b = f b a
+curry :: ((a, b) -> c) -> (a -> b -> c)
+(curry f) a b = f (a, b)
+uncurry f (a, b) = f a b
+all :: Foldable t => (a -> Bool) -> t a -> Bool
+any :: Foldable t => (a -> Bool) -> t a -> Bool
+
+data [x] = x : [x] | []
+
+class Tuple a := a是元组
+
+class Belong xs x -- xs包含x
+instance Belong (a, ...) a -- 允许使用此语法递归展开元组
+  -- 此语法可以兼顾到Solo
+instance Belong xs x => Belong (_, ...xs) x
+
+data () -- 空元组
+data Solo a -- 一元组
+data (a, ...) := n元组
+
+data Bool = False | True deriving (Show, Read, Bounded, Enum, Eq, Ord)
+
+class Bounded a where
+  minBound :: a
+  maxBound :: a
+  {-# MINIMAL minBound, maxBound #-}
+...
+instance Bounded b => Bounded (a -> b) where
+  minBound = const minBound
+  maxBound = const maxBound
+
+class Eq a where
+  (==) :: a -> a -> Bool
+  (/=) :: a -> a -> Bool
+  {-# MINIMAL (==) | (/=) #-}
+instance Eq Bool
+instance Num a => Eq a
+instance Eq a => Eq [a]
+instance Eq Ordering
+instance Eq ()
+instance (Eq a, Eq xs, Tuple xs) => Eq (a, ...xs)
+
+class Eq a => Ord a where
+  compare :: a -> a -> Ordering
+  (<) :: a -> a -> Bool
+  (<=) :: a -> a -> Bool
+  (>) :: a -> a -> Bool
+  (>=) :: a -> a -> Bool
+  max :: a -> a -> a
+  min :: a -> a -> a
+  {-# MINIMAL compare | (<=) #-}
+instance Ord Bool
+instance Num a => Ord a
+instance Ord a => Ord [a]
+instance Ord Ordering
+instance Ord ()
+instance (Ord a, Ord xs, Tuple xs) => Ord (a, ...xs)
+
+data Ordering = LT | EQ | GT
+
+class Enum a where
+  succ :: a -> a
+  pred :: a -> a
+  toEnum :: Integer -> a
+  fromEnum :: a -> Integer
+  enumFrom :: a -> [a]
+  enumFromThen :: a -> a -> [a]
+  enumFromTo :: a -> a -> [a]
+  enumFromThenTo :: a -> a -> a -> [a]
+  {-# MINIMAL toEnum, fromEnum #-}
+instance Enum Bool
+instance Enum Ordering
+instance Enum a => Enum (Solo a)
+instance Enum ()
+instance Intgral a => Enum a
+
+class Functor f where
+  fmap, (<$>) :: (a -> b) -> f a -> f b
+  (<$) :: a -> f b -> f a
+  {-# MINIMAL fmap | (<$>) #-}
+instance Functor []
+instance Functor ((->) r)
+instance Functor (..., a) -- 元组
+
+class Functor f => Applicative f where
+  pure :: a -> f a
+  (<*>) :: f (a -> b) -> f a -> f b
+  liftA2 :: (a -> b -> c) -> f a -> f b -> f c
+  (*>) :: f a -> f b -> f b
+  (<*) :: f a -> f b -> f a
+  {-# MINIMAL pure, ((<*>) | liftA2) #-}
+instance Applicative ((->) r)
+instance Applicative []
+instance Monoid a => Applicative ((,) a)
+instance (Monoid a, Applicative xs, Tuple xs) => Applicative (...xs, a,)
+
+class Applicative m => Monad m where
+  (>>=) :: m a -> (a -> m b) -> m b
+  infixl 1 >>=
+  (>>) :: m a -> m b -> m b
+  a >> b = a >>= \_ -> b
+  infixl 1 >>
+  {-# MINIMAL (>>=) #-}
+instance Monad []
+instance Monad ((->) r)
+
+class Semigroup a where
+  (<>) :: a -> a -> a
+instance Semigroup b => Semigroup (a -> b)
+instance Semigroup a => Semigroup (IO a)
+instance Semigroup [a] -- Defined in ‘GHC.Internal.Base’
+instance Semigroup ()
+instance (Semigroup a, Semigroup xs, Tuple xs) => Semigroup (a, ...xs)
+instance Semigroup Ordering
+
+class Semigroup a => Monoid a where
+  mempty :: a
+  mconcat :: [a] -> a
+  {-# MINIMAL mempty | mconcat #-}
+instance Monoid b => Monoid (a -> b)
+instance Monoid [a]
+instance Monoid ()
+instance (Monoid a, Monoid xs, Tuple xs) => Monoid (a, ...xs)
+instance Monoid Ordering
+
+class Foldable t where
+  foldMap :: Monoid m => (a -> m) -> t a -> m
+  foldr :: (a -> b -> b) -> b -> t a -> b
+  foldl :: (b -> a -> b) -> b -> t a -> b
+  foldr1 :: (a -> a -> a) -> t a -> a
+  foldl1 :: (a -> a -> a) -> t a -> a
+  null :: t a -> Bool
+  toList :: t a -> [a]
+  length :: t a -> Int
+  elem :: Eq a => a -> t a -> Bool
+  maximum :: Ord a => t a -> a
+  minimum :: Ord a => t a -> a
+  sum :: Num a => t a -> a
+  product :: Num a => t a -> a
+  {-# MINIMAL foldMap | foldr #-}
+instance Foldable []
+instance Foldable Solo
+
+class (Functor t, Foldable t) => Traversable t where
+  traverse :: Applicative f => (a -> f b) -> t a -> f (t b)
+  sequenceA :: Applicative f => t (f a) -> f (t a)
+  {-# MINIMAL traverse | sequenceA #-}
+instance Traversable (Either a)
+instance Traversable []
+instance Traversable Maybe
+instance Traversable Solo
+instance Traversable ((,) a)
+for :: Applicative f => t a -> (a -> f b) -> f (t b)
